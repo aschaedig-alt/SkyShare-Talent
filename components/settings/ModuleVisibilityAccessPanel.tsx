@@ -81,7 +81,16 @@ function clonePolicy(policy: ModuleAccessPolicy) {
 const MODULE_ROW_LABEL: Partial<Record<ModuleId, string>> = {
   settings: "Settings",
   people: "People",
-  events: "Events & Outreach"
+  events: "Events & Outreach",
+  // One module each for several menu items since the Nov 25 2026 menu change.
+  reports: "Reports",
+  imports: "Imports / Uploads"
+};
+
+// The Data group's first section is "At a glance", which is not a useful heading for
+// the Reports module's row.
+const MODULE_ROW_GROUP: Partial<Record<ModuleId, string>> = {
+  reports: "Data"
 };
 
 export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVisibilityAccessPanelProps) {
@@ -97,14 +106,16 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
     group.sections.flatMap((section) =>
       section.items
         .filter((item) => {
-          if (seenModules.has(item.id)) {
+          // A borrowed item (Fleet positions under Recruiting, New hire contacts under
+          // Onboarding) does not decide where its module's row is listed.
+          if (item.accessTableHome === false || seenModules.has(item.id)) {
             return false;
           }
           seenModules.add(item.id);
           return true;
         })
         .map((item) => ({
-          group: section.label === group.label ? group.label : `${group.label} › ${section.label}`,
+          group: MODULE_ROW_GROUP[item.id] ?? (section.label === group.label ? group.label : `${group.label} › ${section.label}`),
           id: item.id,
           label: MODULE_ROW_LABEL[item.id] ?? item.label
         }))

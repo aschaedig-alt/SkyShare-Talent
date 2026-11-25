@@ -1,32 +1,25 @@
 import { ImportsWorkspace } from "@/components/imports/ImportsWorkspace";
-import { QualityOfHireUploads } from "@/components/reports/QualityOfHireUploads";
-import { R } from "@/components/reports/report-ui";
 import { getImportsData } from "@/lib/data/imports";
-import { getQohImports } from "@/lib/quality-of-hire/report";
 import { requireModulePageAccess } from "@/lib/data/module-access";
+import { QOH_SOURCES } from "@/lib/quality-of-hire/imports";
+import { SOURCE_TYPE as PAYCOM_EMPLOYEES } from "@/lib/paycom/employee-import";
 
 export const dynamic = "force-dynamic";
 
-export default async function ImportsPage() {
-  const { role } = await requireModulePageAccess("imports");
-  // The Hire quality uploads (Paycom terminations, HR's term types, the interview
-  // calendar) moved here from Reports on Nov 24 2026: uploading is upkeep, not a
-  // report. ADMINS ONLY, as they were on Reports - the files name why people left.
-  const [data, qohImports] = await Promise.all([getImportsData(), role === "ADMIN" ? getQohImports() : Promise.resolve(null)]);
+// Recruiting > Records > Imports (candidates & jobs). Nov 25 2026, menu layout 2:
+// the page was split three ways so each upload sits with what it feeds. The Paycom
+// employee roster is People > Paycom roster import (/imports/paycom-employees) and
+// the Hire quality uploads are Data > Upkeep (/imports/hire-quality). All three keep
+// the imports module's access, so who can open what did not change.
+//
+// Those two keep their own upload history on their own pages, so their batches are
+// left out of this page's Recent batches - the Hire quality ones are HR files, which
+// a recruiter on this page was able to see listed by file name.
+const ELSEWHERE = new Set<string>([...Object.values(QOH_SOURCES), PAYCOM_EMPLOYEES]);
 
-  return (
-    <>
-      <ImportsWorkspace data={data} />
-      {qohImports ? (
-        <div className="px-5 pb-5 lg:px-8">
-          <section className={R.panel}>
-            <p className={R.eyebrow}>Quality of Hire · HR only</p>
-            <h2 className={R.title}>Hire quality uploads</h2>
-            <p className={R.lede}>The three files Reports &gt; Hire quality reads.</p>
-            <QualityOfHireUploads imports={qohImports} />
-          </section>
-        </div>
-      ) : null}
-    </>
-  );
+export default async function ImportsPage() {
+  await requireModulePageAccess("imports");
+  const data = await getImportsData();
+
+  return <ImportsWorkspace data={{ ...data, batches: data.batches.filter((b) => !ELSEWHERE.has(b.sourceType)) }} />;
 }

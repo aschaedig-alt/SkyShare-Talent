@@ -222,7 +222,7 @@ export function PaycomApplicantImport({ batches }: { batches: PaycomBatchSummary
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
       <section className={`${panel} p-5`}>
-        <p className={eyebrow}>Imports / Uploads</p>
+        <p className={eyebrow}>Recruiting · Imports</p>
         <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Paycom applicants</h1>
         <div className="mt-2 max-w-3xl space-y-1 text-sm text-brand-grey dark:text-slate-400">
           <p>
@@ -556,7 +556,7 @@ export function PaycomApplicantImport({ batches }: { batches: PaycomBatchSummary
               {batches.map((b) => (
                 <div key={b.id} className="flex flex-col gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-white/5">
                   <div>
-                    <div className="font-semibold text-brand-lea dark:text-slate-100">{b.files}</div>
+                    <div className="break-all font-semibold text-brand-lea dark:text-slate-100">{b.files}</div>
                     <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
                       {formatMomentDateTime(b.createdAt)}
                       {b.uploadedBy ? ` · ${b.uploadedBy}` : ""} · {b.rowCount} applications · {b.importedCount} imported · {b.skippedCount} skipped · {b.errorCount} errors

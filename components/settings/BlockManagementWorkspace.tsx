@@ -101,7 +101,8 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
             />
           </div>
         </div>
-        <div className="max-h-[560px] divide-y divide-brand-lea/8 overflow-y-auto dark:divide-white/10">
+        {/* No height cap: this sits in a scrolling page, so the page scrolls (CLAUDE.md, one scrollbar per screen). */}
+        <div className="divide-y divide-brand-lea/8 dark:divide-white/10">
           {filtered.map((b) => (
             <button
               key={b.id}
@@ -148,7 +149,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
 
             <div className="mt-4">
               <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Jobs using this block</h3>
-              <div className="mt-2 max-h-56 divide-y divide-brand-lea/8 overflow-auto rounded border border-brand-lea/10 dark:divide-white/10 dark:border-white/10">
+              <div className="mt-2 divide-y divide-brand-lea/8 rounded border border-brand-lea/10 dark:divide-white/10 dark:border-white/10">
                 {selected.usedByJobs?.length ? (
                   selected.usedByJobs.map((job) => (
                     <div key={job.id} className="flex items-center justify-between gap-3 px-3 py-2">

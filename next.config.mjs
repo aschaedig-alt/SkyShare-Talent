@@ -27,7 +27,10 @@ const nextConfig = {
       // boundary and rendered as an error page (NEXT_REDIRECT in the payload,
       // HTTP 200, no Location header) instead of redirecting. A config redirect
       // is a real 308 that never reaches React and cannot be swallowed.
-      { source: "/settings/fleet", destination: "/fleet/positions", permanent: true }
+      { source: "/settings/fleet", destination: "/fleet/positions", permanent: true },
+      // Block management folded into Content Blocks as its Manage tab (Nov 25 2026,
+      // menu layout 2). Admins-only there too. Not permanent: a browser caches a 308.
+      { source: "/settings/content-blocks", destination: "/blocks?tab=manage", permanent: false }
     ];
   }
 };

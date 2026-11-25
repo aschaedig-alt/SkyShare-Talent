@@ -425,8 +425,8 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
             Data &gt; Cleanup
           </Link>{" "}
           and the uploads on{" "}
-          <Link href="/imports" className={R.link}>
-            Data &gt; Imports
+          <Link href="/imports/hire-quality" className={R.link}>
+            Data &gt; Upkeep &gt; Hire quality uploads
           </Link>
           .
         </p>

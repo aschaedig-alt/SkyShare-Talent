@@ -159,8 +159,8 @@ export function PaycomEmployeeImport({ batches }: { batches: PaycomEmployeeBatch
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
       <section className={`${panel} p-5`}>
-        <p className={eyebrow}>Imports / Uploads</p>
-        <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Paycom employees</h1>
+        <p className={eyebrow}>People</p>
+        <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Paycom roster import</h1>
         <div className="mt-2 max-w-3xl space-y-1 text-sm text-brand-grey dark:text-slate-400">
           <p>
             In Paycom, run the Advanced Report Writer employee export (first and last name, department, position, hire, re-hire and termination
@@ -412,7 +412,7 @@ export function PaycomEmployeeImport({ batches }: { batches: PaycomEmployeeBatch
                 <div key={b.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <div className="font-semibold text-brand-lea dark:text-slate-100">{b.file}</div>
+                      <div className="break-all font-semibold text-brand-lea dark:text-slate-100">{b.file}</div>
                       <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
                         {formatMomentDateTime(b.createdAt)}
                         {b.uploadedBy ? ` · ${b.uploadedBy}` : ""}

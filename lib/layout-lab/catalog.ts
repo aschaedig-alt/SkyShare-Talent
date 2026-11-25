@@ -56,8 +56,8 @@ export const LAB_PAGES: LabPage[] = [
   { id: "orientation", label: "Orientation", route: "/orientation", domain: "People" },
   { id: "compliments", label: "Compliments", route: "/compliments", domain: "People" },
 
-  { id: "imports", label: "Imports / Uploads", route: "/imports", domain: "Data" },
-  { id: "duplicate-review", label: "Duplicate Review", route: "/duplicate-review", domain: "Data" },
+  { id: "imports", label: "Imports (candidates & jobs)", route: "/imports", domain: "Recruiting" },
+  { id: "duplicate-review", label: "Duplicate Review", route: "/duplicate-review", domain: "Recruiting" },
   { id: "reports", label: "Reports", route: "/reports", domain: "Data" },
 
   { id: "settings", label: "Settings (General)", route: "/settings", domain: "Admin" },
@@ -65,7 +65,7 @@ export const LAB_PAGES: LabPage[] = [
   { id: "settings-activity", label: "Activity", route: "/settings/activity", domain: "Admin" },
   { id: "settings-feedback", label: "Feedback", route: "/settings/feedback", domain: "Admin" },
   { id: "settings-templates", label: "Templates", route: "/settings/templates", domain: "Admin" },
-  { id: "settings-content-blocks", label: "Block management", route: "/settings/content-blocks", domain: "Admin" }
+  { id: "settings-content-blocks", label: "Block management (Content Blocks › Manage)", route: "/blocks?tab=manage", domain: "Publishing" }
 ];
 
 export const LAB_BOXES: LabBox[] = [

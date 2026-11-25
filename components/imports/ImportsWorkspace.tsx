@@ -33,11 +33,19 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
-              Data intake
+              Recruiting · Records
             </p>
-            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Imports / Uploads</h1>
+            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Imports (candidates &amp; jobs)</h1>
             <p className="mt-1 max-w-3xl text-sm text-brand-grey dark:text-slate-400">
-              Central home for candidate imports, job imports, file uploads, requirement catalog updates, and manual review queues.
+              Candidate imports, Paycom applicants, resumes, jobs, job PDFs and the requirement catalog.
+            </p>
+            {/* Split three ways Nov 25 2026 (menu layout 2): each upload sits with what it feeds. */}
+            <p className="mt-1 max-w-3xl text-sm text-brand-grey dark:text-slate-400">
+              The Paycom employee roster is under{" "}
+              <Link href="/imports/paycom-employees" className="font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-[#8fb3d6]">
+                People › Paycom roster import
+              </Link>
+              ; the Hire quality uploads are under Data › Upkeep.
             </p>
           </div>
           <div className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
@@ -71,21 +79,6 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
         <span className="shrink-0 rounded bg-brand-lea px-3 py-2 text-sm font-semibold text-white">Open</span>
       </Link>
 
-      <Link
-        href="/imports/paycom-employees"
-        className="flex flex-col gap-2 rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:shadow-glow sm:flex-row sm:items-center sm:justify-between dark:bg-brand-panel dark:ring-white/10"
-      >
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Paycom</p>
-          <h2 className="mt-1 text-base font-semibold text-brand-lea dark:text-slate-100">Paycom employees</h2>
-          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-            Drop Paycom&apos;s employee export (Advanced Report Writer .xlsx) to bring the Employees directory up to date: terminations, re-hires,
-            dates, full / part time and position changes. Preview first, undo any time.
-          </p>
-        </div>
-        <span className="shrink-0 rounded bg-brand-lea px-3 py-2 text-sm font-semibold text-white">Open</span>
-      </Link>
-
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <CandidateCsvImportCard />
         <ResumeFileUploadImportCard />
@@ -94,8 +87,10 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
         <RequirementCatalogImportCard />
       </section>
 
+      {/* min-w-0 on both columns: a grid item will not shrink below its longest
+          unbroken word, and an upload file name pushed a 329px phone sideways. */}
       <section className="grid gap-4 xl:grid-cols-[1fr_380px]">
-        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        <section className="min-w-0 rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">
               Import history
@@ -108,9 +103,9 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
                 {data.batches.map((batch) => (
                   <div key={batch.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
+                      <div className="min-w-0">
                         <div className="font-semibold text-brand-lea dark:text-slate-100">{batch.sourceType.replaceAll("_", " ")}</div>
-                        <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
+                        <div className="mt-1 break-all text-xs text-brand-grey dark:text-slate-400">
                           {batch.sourceFilename ?? "No filename"} - {formatDate(batch.completedAt)}
                         </div>
                       </div>
@@ -137,7 +132,7 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
           </div>
         </section>
 
-        <aside className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        <aside className="min-w-0 rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">
               Review queue

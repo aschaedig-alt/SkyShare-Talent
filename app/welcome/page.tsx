@@ -10,7 +10,7 @@ import { NewHireContactsView } from "@/components/new-hire-contacts/NewHireConta
 // The link now carries a share token (?t=). Without a valid one this renders
 // welcome/not-found.tsx and no contact data is fetched at all, so the curated
 // staff directory is no longer served to anyone who simply types the URL.
-// Rotate the token from Settings → New hire contacts to invalidate every link
+// Rotate the token from Onboarding → New hire contacts to invalidate every link
 // already sent.
 //
 // Note the status is 200 rather than 404 — see the comment in not-found.tsx for

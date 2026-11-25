@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { Plane, Menu, X, ChevronsLeft, ChevronsRight, ChevronDown, ChevronRight, CircleUser } from "lucide-react";
+import { Plane, Menu, X, ChevronsLeft, ChevronsRight, ChevronDown, ChevronRight, CircleUser, BookOpen } from "lucide-react";
 import type { RoleName } from "@/lib/auth/roles";
 import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
@@ -44,6 +44,9 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  // The Data group's "Find a report" box (Nov 25 2026: the Reports list moved into
+  // this menu, and its search box came with it).
+  const [menuQuery, setMenuQuery] = useState("");
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
@@ -100,6 +103,28 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
   const activeGroup =
     groups.find((g) => g.sections.some((s) => s.items.some((i) => i.href === activeHref))) ?? null;
   const onHome = matchesPath(pathname, homeHref);
+
+  // A section stored in collapsedSections has been TOGGLED from its default: folded
+  // for an ordinary section, opened for a defaultCollapsed one (Records). Either way
+  // the section holding the page you are on is open, or its lit item would be hidden.
+  function isFolded(section: VisibleNavigationSection) {
+    if (section.items.some((i) => i.href === activeHref)) return false;
+    const toggled = collapsedSections.has(section.id);
+    return section.defaultCollapsed ? !toggled : toggled;
+  }
+
+  // The Data menu, narrowed by the search box: a report matches on its title, its
+  // question or its group. Matching sections are shown open.
+  const q = menuQuery.trim().toLowerCase();
+  function searched(group: VisibleNavigationGroup): VisibleNavigationSection[] {
+    if (!q) return group.sections;
+    return group.sections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((i) => `${i.label} ${i.keywords ?? ""} ${section.label}`.toLowerCase().includes(q))
+      }))
+      .filter((section) => section.items.length > 0);
+  }
 
   function firstHref(group: VisibleNavigationGroup) {
     return group.sections[0]?.items[0]?.href ?? homeHref;
@@ -194,8 +219,14 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
     );
   }
 
-  const topGroups = groups.filter((g) => g.id !== "admin");
+  const topGroups = groups.filter((g) => g.id !== "admin" && g.id !== "help");
   const adminGroup = groups.find((g) => g.id === "admin") ?? null;
+  // Help (the Handbook) is a button at the bottom of the rail rather than a tile,
+  // and opens no second menu: it is one page (Nov 25 2026, menu layout 2).
+  const helpHref = groups.find((g) => g.id === "help")?.sections[0]?.items[0]?.href ?? null;
+  const onHelp = helpHref ? matchesPath(pathname, helpHref) : false;
+  const panelGroup = activeGroup && activeGroup.id !== "help" ? activeGroup : null;
+  const panelSections = panelGroup ? (panelGroup.id === "data" ? searched(panelGroup) : panelGroup.sections) : [];
 
   return (
     <>
@@ -258,7 +289,7 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
                     key={`${group.id}-${section.id}`}
                     section={section}
                     activeHref={activeHref}
-                    collapsed={collapsedSections.has(section.id)}
+                    collapsed={isFolded(section)}
                     onToggle={() => toggleSection(section.id)}
                   />
                 ))
@@ -309,8 +340,10 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
               admin tile                             =  43
                                                     ----
                                                      581  (was 635)
+              help button (Nov 25 2026) mt-2 h-9      +44
+                                                     625
 
-            That is 114px of headroom at her 695px viewport, so nothing scrolls.
+            That is 70px of headroom at her 695px viewport, so nothing scrolls.
             The four 36px utility buttons are deliberately NOT shrunk — they live in
             other components (FeedbackButton, ThemeToggle, SignOutButton) and making
             two of them smaller than their neighbours would look worse than it saves.
@@ -337,7 +370,7 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
             engages, overflow-x-hidden must ride along — per the CSS overflow spec
             setting one axis makes the other compute to auto, which is what silently
             turned on horizontal scrolling and produced two bars in a 70px column. */}
-        <div className="flex h-full min-h-0 w-[70px] flex-col items-center border-r border-white/10 bg-brand-eden py-2 [@media(max-height:620px)]:overflow-y-auto [@media(max-height:620px)]:overflow-x-hidden">
+        <div className="flex h-full min-h-0 w-[70px] flex-col items-center border-r border-white/10 bg-brand-eden py-2 [@media(max-height:640px)]:overflow-y-auto [@media(max-height:640px)]:overflow-x-hidden">
           <Link
             href={homeHref}
             prefetch={false}
@@ -365,6 +398,24 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
               </Fragment>
             ))}
           </div>
+
+          {/* Help: the Handbook, for every role that can see it. 44px (mt-2 + h-9),
+              counted in the rail budget above. */}
+          {helpHref ? (
+            <Link
+              href={helpHref}
+              prefetch={false}
+              title="Handbook"
+              aria-label="Handbook"
+              aria-current={onHelp ? "page" : undefined}
+              className={clsx(
+                "mt-2 flex h-9 w-9 items-center justify-center rounded transition",
+                onHelp ? "bg-brand-gold text-brand-lea" : "text-white/70 hover:bg-white/10 hover:text-white"
+              )}
+            >
+              <BookOpen className="h-5 w-5" />
+            </Link>
+          ) : null}
 
           {/* Desktop-only by construction: this container is `hidden ... lg:flex`.
               The mobile counterpart is mounted near the hamburger above. */}
@@ -405,8 +456,11 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
         </div>
 
         {/* Items panel */}
-        {!collapsed && activeGroup && (
-          <div className="flex w-56 flex-col border-r border-white/10 bg-brand-lea">
+        {!collapsed && panelGroup && (
+          // Data is w-64 (224px at the 14px root) rather than w-56 (196px): report names
+          // are long and carry an HR badge, and at 196px three were cut off (Manager
+          // check-ins, Where hires come from, Hire quality uploads). Measured Nov 25 2026.
+          <div className={clsx("flex shrink-0 flex-col border-r border-white/10 bg-brand-lea", panelGroup.id === "data" ? "w-64" : "w-56")}>
             {/* The second menu. Aimee saw a scrollbar down this panel too, on the
                 same 1536x695 laptop, and it was engaging for the sake of a few
                 pixels — so this is the same fit-first fix as the rail.
@@ -443,17 +497,35 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
                 is exactly how the icon rail ended up with two bars. Nothing in this
                 panel is positioned outside it, so unlike the rail the clipping is
                 harmless here. */}
-            <nav className="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden px-2.5 py-2" aria-label="Section navigation">
-              {activeGroup.sections.map((section) => (
+            <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2.5 py-2" aria-label="Section navigation">
+              {panelGroup.id === "data" ? (
+                // The Reports library's search box, now in the blue menu. 36px tall.
+                <input
+                  type="search"
+                  value={menuQuery}
+                  onChange={(e) => setMenuQuery(e.target.value)}
+                  placeholder="Find a report"
+                  aria-label="Find a report"
+                  className="h-9 w-full rounded-sm border border-white/15 bg-white/10 px-2.5 text-sm text-white outline-none placeholder:text-white/60 focus:border-brand-gold"
+                />
+              ) : null}
+              {panelSections.map((section) => (
                 <SectionBlock
                   key={section.id}
                   section={section}
                   activeHref={activeHref}
-                  collapsible={activeGroup.sections.length > 1}
-                  collapsed={collapsedSections.has(section.id)}
+                  collapsible={panelGroup.sections.length > 1 && !q}
+                  collapsed={q ? false : isFolded(section)}
                   onToggle={() => toggleSection(section.id)}
+                  // 32px rows here, 36px in the phone drawer. Recruiting with Records open
+                  // is 17 rows: 751px at 36px against her 695px laptop, 683px at 32px
+                  // (measured in Chrome at 1536x695, Nov 25 2026).
+                  dense
                 />
               ))}
+              {panelGroup.id === "data" && q && panelSections.length === 0 ? (
+                <p className="px-2 text-sm text-white/70">No report matches &ldquo;{menuQuery}&rdquo;.</p>
+              ) : null}
             </nav>
           </div>
         )}
@@ -468,9 +540,10 @@ type SectionBlockProps = {
   collapsed: boolean;
   onToggle: () => void;
   collapsible?: boolean;
+  dense?: boolean;
 };
 
-function SectionBlock({ section, activeHref, collapsed, onToggle, collapsible = true }: SectionBlockProps) {
+function SectionBlock({ section, activeHref, collapsed, onToggle, collapsible = true, dense = false }: SectionBlockProps) {
   const isOpen = !collapsible || !collapsed;
 
   return (
@@ -525,12 +598,25 @@ function SectionBlock({ section, activeHref, collapsed, onToggle, collapsible = 
                 prefetch={false}
                 aria-current={active ? "page" : undefined}
                 className={clsx(
-                  "flex items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition",
+                  "flex items-center gap-3 rounded-sm px-3 text-sm font-medium transition",
+                  dense ? "py-1.5" : "py-2",
                   active ? "bg-white text-brand-lea shadow-sm" : "text-white/90 hover:bg-white/10 hover:text-white"
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="truncate">{item.label}</span>
+                {/* Admins-only items (HR reports, Hire quality uploads), as the Reports
+                    list marked them. Only admins see these rows at all. */}
+                {item.hrOnly ? (
+                  <span
+                    className={clsx(
+                      "ml-auto shrink-0 rounded-sm border px-1 py-px text-[9px] font-bold leading-none tracking-wide",
+                      active ? "border-brand-lea/30 text-brand-lea" : "border-brand-gold/60 text-brand-gold"
+                    )}
+                  >
+                    HR
+                  </span>
+                ) : null}
                 {/* Instant feedback that the click registered — see the
                     component doc for why this exists. */}
                 <LinkPendingIndicator className={active ? "text-brand-lea" : "text-white"} />

@@ -1,7 +1,9 @@
 import type { ComponentType } from "react";
 import type { RoleName } from "@/lib/auth/roles";
+import { REPORT_GROUPS, REPORTS, GLANCE_HREF } from "@/lib/reports/catalog";
 import {
   Activity,
+  BadgeCheck,
   BarChart3,
   Blocks,
   BookOpen,
@@ -17,6 +19,8 @@ import {
   FileCheck2,
   FileSignature,
   FileText,
+  FileUp,
+  Gauge,
   HeartHandshake,
   Import,
   Layers,
@@ -28,9 +32,12 @@ import {
   MessageSquare,
   Plane,
   Radar,
+  Receipt,
   SearchCheck,
   Settings,
   SlidersHorizontal,
+  TrendingDown,
+  UserCheck,
   Sparkles,
   UserPlus,
   Users,
@@ -99,12 +106,33 @@ export type NavigationItem = {
    * which is what Scoring setup did the moment Pilot Requirements left the menu.
    */
   activeAs?: string;
+  /**
+   * ADMINS ONLY, on top of the module's access: the HR reports and the Hire quality
+   * uploads (they name why people left, or carry managers' notes). Shown with an HR
+   * badge. Their pages check again, since a URL can be typed.
+   */
+  hrOnly?: boolean;
+  /** Extra words the Reports menu's search matches (a report's question). */
+  keywords?: string;
+  /**
+   * False for an item that lives in a group other than its module's home (Fleet
+   * positions under Recruiting, New hire contacts under Onboarding). The admin access
+   * table lists each module once, under its first item, and this keeps that row in
+   * the module's own home group rather than wherever a borrowed item happens to sit.
+   */
+  accessTableHome?: false;
 };
 
 export type NavigationSection = {
   id: string;
   label: string;
   items: NavigationItem[];
+  /**
+   * Starts folded in the side menu until somebody opens it (then remembered), and is
+   * always open on one of its own pages. Records does this so Recruiting's second
+   * menu fits Aimee's 1536x695 laptop without a scrollbar.
+   */
+  defaultCollapsed?: boolean;
 };
 
 export type NavigationGroup = {
@@ -121,6 +149,17 @@ export type NavigationGroup = {
 // "command-center": the id is what the access policy is keyed on, and using
 // "settings" is what makes it appear and disappear with the rest of the Admin
 // section instead of needing its own visibility rule.
+const REPORT_ICON: Record<string, ComponentType<{ className?: string }>> = {
+  headcount: Users,
+  turnover: TrendingDown,
+  progression: Plane,
+  quality: BadgeCheck,
+  "check-ins": UserCheck,
+  offers: FileSignature,
+  sources: Radar,
+  travel: Receipt
+};
+
 export const navigationGroups: readonly NavigationGroup[] = [
   {
     id: "recruiting",
@@ -133,6 +172,11 @@ export const navigationGroups: readonly NavigationGroup[] = [
         items: [
           { id: "candidates", href: "/candidates", label: "Candidates", icon: SearchCheck },
           { id: "recruiting-jobs", href: "/recruiting-jobs", label: "Jobs", icon: BriefcaseBusiness },
+          // Moved here from Fleet on Nov 25 2026 (menu layout 2): it is the list of
+          // pilot positions that Jobs, Pilot Requirements and Matchboard all resolve
+          // against, so it sits next to Jobs. Still the fleet module, so access is
+          // unchanged; read-only, as before.
+          { id: "fleet", href: "/fleet/positions", label: "Fleet positions", icon: Layers, accessTableHome: false },
           // Not in the menu since Sep 23: a pilot requirement is a tab on its job
           // now, and /pilot-requirements only forwards old links there. Kept here
           // because the module still gates Scoring setup (/pilot-requirements/
@@ -182,7 +226,24 @@ export const navigationGroups: readonly NavigationGroup[] = [
         items: [
           { id: "jobs", href: "/jobs", label: "Job Post Builder", icon: ClipboardList },
           { id: "review", href: "/review", label: "Final Review", icon: FileCheck2 },
+          // Block management (archive, delete, where used) is its Manage tab, for
+          // admins, since Nov 25 2026. /settings/content-blocks redirects there.
           { id: "blocks", href: "/blocks", label: "Content Blocks", icon: Blocks }
+        ]
+      },
+      {
+        // RECORDS, Nov 25 2026 (Aimee asked for these under Recruiting; his pick of
+        // menu layout 2, her word). Everything here is candidate and job data.
+        // Folded by default so the second menu still fits her 1536x695 laptop.
+        id: "records",
+        label: "Records",
+        defaultCollapsed: true,
+        items: [
+          // Imports was split three ways: the Paycom roster import went to People and
+          // the Hire quality uploads to Data > Upkeep. One module for all three.
+          { id: "imports", href: "/imports", label: "Imports (candidates & jobs)", icon: Import },
+          { id: "duplicate-review", href: "/duplicate-review", label: "Duplicate Review", icon: CheckCircle2 },
+          { id: "archive", href: "/archive", label: "Historical Archive", icon: Database }
         ]
       }
     ]
@@ -213,7 +274,9 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "people", href: "/people", label: "New hires", icon: UserPlus },
           { id: "people", href: "/orientation", label: "Orientation", icon: CalendarCheck },
           { id: "people", href: "/travel", label: "Travel", icon: Plane },
-          { id: "people", href: "/business-cards", label: "Business cards", icon: CreditCard }
+          // From Admin > Settings, Nov 25 2026: the contacts card is part of a new
+          // hire's checklist. Still the settings module, so still admins only.
+          { id: "settings", href: "/settings/new-hire-contacts", label: "New hire contacts", icon: Contact, accessTableHome: false }
         ]
       }
     ]
@@ -228,7 +291,13 @@ export const navigationGroups: readonly NavigationGroup[] = [
         label: "People",
         items: [
           { id: "people", href: "/employees", label: "Employees", icon: Users },
-          { id: "people", href: "/compliments", label: "Compliments", icon: Sparkles }
+          { id: "people", href: "/compliments", label: "Compliments", icon: Sparkles },
+          // From Onboarding, Nov 25 2026: cards are ordered for every employee now,
+          // not only new hires (the page has New hires and All employees views).
+          { id: "people", href: "/business-cards", label: "Business cards", icon: CreditCard },
+          // The Paycom employee export updates the Employees directory, so it sits
+          // here (was a card on Imports). The imports module, as before.
+          { id: "imports", href: "/imports/paycom-employees", label: "Paycom roster import", icon: FileUp }
         ]
       }
     ]
@@ -243,35 +312,74 @@ export const navigationGroups: readonly NavigationGroup[] = [
         label: "Fleet",
         items: [
           { id: "fleet", href: "/fleet/crew", label: "Crew Org Chart", icon: Plane },
-          { id: "fleet", href: "/fleet/maintenance", label: "Maintenance Org Chart", icon: Wrench },
-          // Moved out of Admin > Settings (the Jul admin audit): the canonical
-          // list of pilot positions is recruiting reference data that Jobs,
-          // Pilot Requirements and Matchboard all resolve against, not an
-          // administrative setting. Gated on "fleet" now rather than "settings",
-          // which only widens who can READ it — the view is read-only.
-          { id: "fleet", href: "/fleet/positions", label: "Fleet positions", icon: Layers }
+          { id: "fleet", href: "/fleet/maintenance", label: "Maintenance Org Chart", icon: Wrench }
+          // Fleet positions moved to Recruiting, next to Jobs, on Nov 25 2026.
         ]
       }
     ]
   },
+  // DATA = Reports + Upkeep (Nov 25 2026, menu layout 2). The Reports list moved
+  // out of the page and into this blue menu, so there is one menu, not two: the
+  // sections below are built from lib/reports/catalog.ts, the same list the
+  // Reports pages read, so a report cannot be in one and missing from the other.
+  // The Sidebar gives this group a "Find a report" box and HR badges.
   {
     id: "data",
     label: "Data",
     icon: Database,
     sections: [
       {
-        id: "data",
-        label: "Data",
+        id: "reports-glance",
+        label: "At a glance",
+        items: [{ id: "reports", href: GLANCE_HREF, label: "Overview", icon: Gauge, keywords: "at a glance summary" }]
+      },
+      ...REPORT_GROUPS.map((g) => ({
+        id: `reports-${g.toLowerCase()}`,
+        label: g,
+        items: REPORTS.filter((r) => r.group === g).map(
+          (r): NavigationItem => ({
+            id: "reports",
+            href: r.href,
+            label: r.title,
+            icon: REPORT_ICON[r.id] ?? BarChart3,
+            hrOnly: r.hrOnly,
+            keywords: `${r.question} ${g}`
+          })
+        )
+      })),
+      {
+        id: "upkeep",
+        label: "Upkeep",
         items: [
-          { id: "imports", href: "/imports", label: "Imports / Uploads", icon: Import },
-          { id: "duplicate-review", href: "/duplicate-review", label: "Duplicate Review", icon: CheckCircle2 },
-          { id: "reports", href: "/reports", label: "Reports", icon: BarChart3 },
-          // Upkeep that used to sit inside Reports (Nov 24 2026): source names and the
-          // Paycom-vs-Journey leaver list. Rides on Reports access, as the rename route does.
-          { id: "reports", href: "/cleanup", label: "Cleanup", icon: Wrench },
-          { id: "archive", href: "/archive", label: "Historical Archive", icon: Database },
-          { id: "handbook", href: "/handbook", label: "Handbook", icon: BookOpen }
+          // Source names and the Paycom-vs-Journey leaver list (Nov 24 2026). Rides on
+          // Reports access, as the rename route does.
+          { id: "reports", href: "/cleanup", label: "Cleanup", icon: Wrench, keywords: "source names paycom mismatches" },
+          // The three files Hire quality reads, off the Imports page since Nov 25. The
+          // imports module, as when they sat there; admins only.
+          {
+            id: "imports",
+            href: "/imports/hire-quality",
+            label: "Hire quality uploads",
+            icon: FileUp,
+            hrOnly: true,
+            keywords: "terminations term types interview calendar upload"
+          }
         ]
+      }
+    ]
+  },
+  // HELP: the Handbook, as a button at the bottom of the rail for every role (Nov 25
+  // 2026). It was the last item in Data, which made Data the one tile a Viewer saw.
+  // Its chapters are mostly hiring and onboarding, so People was not its home either.
+  {
+    id: "help",
+    label: "Help",
+    icon: BookOpen,
+    sections: [
+      {
+        id: "help",
+        label: "Help",
+        items: [{ id: "handbook", href: "/handbook", label: "Handbook", icon: BookOpen }]
       }
     ]
   },
@@ -290,9 +398,9 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "settings", href: "/settings/activity", label: "Activity", icon: Activity },
           { id: "settings", href: "/settings/feedback", label: "Feedback", icon: MessageSquare },
           { id: "settings", href: "/settings/templates", label: "Templates", icon: FileText },
-          { id: "settings", href: "/settings/content-blocks", label: "Block management", icon: Blocks },
-          { id: "settings", href: "/settings/layout-lab", label: "Layout Lab", icon: LayoutGrid },
-          { id: "settings", href: "/settings/new-hire-contacts", label: "New hire contacts", icon: Contact }
+          { id: "settings", href: "/settings/layout-lab", label: "Layout Lab", icon: LayoutGrid }
+          // Block management folded into Content Blocks, New hire contacts moved to
+          // Onboarding (both Nov 25 2026).
         ]
       }
     ]
@@ -518,7 +626,10 @@ export function getVisibleNavigationGroups(
         .map((section) => ({
           ...section,
           items: section.items.filter(
-            (item) => item.showInMenu !== false && isSidebarVisible(ruleFor(policy, item.id, role, overrides))
+            (item) =>
+              item.showInMenu !== false &&
+              (!item.hrOnly || role === "ADMIN") &&
+              isSidebarVisible(ruleFor(policy, item.id, role, overrides))
           )
         }))
         .filter((section) => section.items.length > 0)

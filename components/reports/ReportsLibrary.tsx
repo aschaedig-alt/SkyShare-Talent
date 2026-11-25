@@ -11,10 +11,16 @@ import { GLANCE_HREF, REPORT_GROUPS, reportAt, reportsFor } from "@/lib/reports/
 
 // THE REPORTS LIBRARY SHELL - his pick of five redesigns, 2026-11-24.
 //
-// A side list of every report, "At a glance" pinned first, one report at a time.
+// A list of every report, "At a glance" pinned first, one report at a time.
 // Every entry is a real <Link>, so each report has a URL that can be sent to
 // somebody and opened in a new tab (CLAUDE.md: anything that changes the whole
-// screen is a real link). On a phone the list folds into one menu at the top.
+// screen is a real link).
+//
+// ON A DESKTOP THE LIST IS THE BLUE MENU since Nov 25 2026 (Aimee asked for it, his
+// pick of menu layout 2): the Data group in lib/navigation/modules.ts is built from
+// the same catalog, with the search box and HR badges, so there is one menu, not a
+// second one inside the page. On a phone the list still folds into one menu at the
+// top of the page, so the report you are on is named without opening the drawer.
 
 function List({ isHr, query, onPick }: { isHr: boolean; query: string; onPick?: () => void }) {
   const pathname = usePathname();
@@ -58,7 +64,7 @@ function List({ isHr, query, onPick }: { isHr: boolean; query: string; onPick?: 
   );
 }
 
-function Toolbar({ canShare }: { canShare: boolean }) {
+function Toolbar({ canShare, asOf }: { canShare: boolean; asOf: string }) {
   const pathname = usePathname();
   const here = reportAt(pathname);
   const [copied, setCopied] = useState(false);
@@ -81,6 +87,7 @@ function Toolbar({ canShare }: { canShare: boolean }) {
         ) : (
           <span className={R.strong}>At a glance</span>
         )}
+        <span className="ml-2">· as of {asOf}</span>
       </p>
       <div className="flex flex-wrap items-center gap-2">
         {canShare && here?.id === "progression" ? <ReportShareButton /> : null}
@@ -97,25 +104,11 @@ function Toolbar({ canShare }: { canShare: boolean }) {
 
 export function ReportsLibrary({ isHr, canShare, asOf, children }: { isHr: boolean; canShare: boolean; asOf: string; children: React.ReactNode }) {
   const pathname = usePathname();
-  const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const here = reportAt(pathname);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
-      <nav aria-label="Reports" className={clsx(R.panel, "hidden lg:sticky lg:top-4 lg:block print:hidden")}>
-        <h1 className={R.title}>Reports</h1>
-        <p className={R.tileSub}>As of {asOf}</p>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Find a report"
-          aria-label="Find a report"
-          className={clsx(R.input, "mt-3")}
-        />
-        <List isHr={isHr} query={query} />
-      </nav>
+    <div className="grid gap-4">
 
       {/* A phone: the same list, folded into one menu. */}
       <details
@@ -134,7 +127,7 @@ export function ReportsLibrary({ isHr, canShare, asOf, children }: { isHr: boole
       </details>
 
       <div className="min-w-0 space-y-4">
-        <Toolbar canShare={canShare} />
+        <Toolbar canShare={canShare} asOf={asOf} />
         {children}
       </div>
     </div>

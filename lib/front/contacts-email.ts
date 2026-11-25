@@ -136,7 +136,7 @@ export async function buildContactsEmail(
   const token = await getShareToken();
   if (!token) {
     throw new Error(
-      "No contacts share link exists yet. Open Settings → New hire contacts once to create it, then send."
+      "No contacts share link exists yet. Open Onboarding → New hire contacts once to create it, then send."
     );
   }
   const shareUrl = buildShareUrl(resolveOrigin(), token);

@@ -119,17 +119,18 @@ export const CHAPTERS: HandbookChapter[] = [
   { slug: "compliments", file: null, title: "Recognition & compliments", blurb: "Giving recognition, points and redemptions, birthdays & anniversaries.", status: "planned", group: "People", routePrefixes: [] },
   { slug: "phone-contacts", file: null, title: "Setting up a new hire's phone contacts", blurb: "The vCard hand-off and curating who's on it.", status: "planned", group: "People", routePrefixes: [] },
 
-  // ── Data ──────────────────────────────────────────────────────────────
-  { slug: "imports", file: null, title: "Importing data", blurb: "Bringing in hires, jobs, and historical records from a file.", status: "planned", group: "Data", routePrefixes: [] },
-  { slug: "duplicate-review", file: null, title: "Resolving duplicates", blurb: "Working the duplicate queue for candidates and jobs.", status: "planned", group: "Data", routePrefixes: [] },
+  // ── Data (Imports, Duplicate Review and the Archive are Recruiting > Records
+  //    in the menu since Nov 25 2026, so their chapters are grouped there) ──
+  { slug: "imports", file: null, title: "Importing data", blurb: "Bringing in hires, jobs, and historical records from a file.", status: "planned", group: "Recruiting", routePrefixes: [] },
+  { slug: "duplicate-review", file: null, title: "Resolving duplicates", blurb: "Working the duplicate queue for candidates and jobs.", status: "planned", group: "Recruiting", routePrefixes: [] },
   { slug: "reports", file: null, title: "Reading the reports", blurb: "What each report shows and how to use it.", status: "planned", group: "Data", routePrefixes: [] },
-  { slug: "archive", file: null, title: "The historical candidate archive", blurb: "Searching and using the imported Jazz archive.", status: "planned", group: "Data", routePrefixes: [] },
+  { slug: "archive", file: null, title: "The historical candidate archive", blurb: "Searching and using the imported Jazz archive.", status: "planned", group: "Recruiting", routePrefixes: [] },
 
   // ── Admin & cross-cutting ─────────────────────────────────────────────
   { slug: "team-access", file: null, title: "Managing team access & roles", blurb: "Adding people and setting Admin / Recruiter / Viewer.", status: "planned", group: "Admin & cross-cutting", routePrefixes: [] },
   { slug: "email-templates", file: null, title: "Email templates & the Front mailboxes", blurb: "How the app's templates map to Front, and who sends from where.", status: "planned", group: "Admin & cross-cutting", routePrefixes: [] },
   { slug: "test-data", file: null, title: "Testing safely & cleaning up test data", blurb: "TEST tags, throwaway logins, and full teardown on the shared live DB.", status: "planned", group: "Admin & cross-cutting", routePrefixes: [] },
-  { slug: "fleet-positions", file: null, title: "Fleet positions registry", blurb: "Editing the master list of fleet positions the app draws from.", status: "planned", group: "Admin & cross-cutting", routePrefixes: [] }
+  { slug: "fleet-positions", file: null, title: "Fleet positions registry", blurb: "Editing the master list of fleet positions the app draws from.", status: "planned", group: "Recruiting", routePrefixes: [] }
 ];
 
 /** The combined book — all published chapters in one document. */

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui";
 import {
   AlertTriangle,
+  Archive,
   Blocks,
   CheckCircle2,
   ChevronDown,
@@ -30,6 +30,7 @@ import type {
   SerializedJobPost
 } from "@/lib/types";
 import { BlockTemplateBoard } from "@/components/content-blocks/BlockTemplateBoard";
+import { BlockManagementWorkspace } from "@/components/settings/BlockManagementWorkspace";
 import { RichText, RichTextParagraphs, RichTextMixed } from "@/components/shared/RichText";
 import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { inlineTextColorOptions } from "@/lib/formatting/rich-text";
@@ -38,10 +39,17 @@ import { splitCleanLines } from "@/lib/formatting/text";
 type BlockLibraryProps = {
   blocks: SerializedContentBlock[];
   jobs: SerializedJobPost[];
+  /**
+   * Admins only: the Manage tab (where a block is used, archive, delete). It was a
+   * separate Admin > Settings > Block management page until Nov 25 2026, folded in
+   * here so a block is found, edited and retired in one place (his pick, menu
+   * layout 2). /settings/content-blocks redirects to /blocks?tab=manage.
+   */
+  canManage?: boolean;
 };
 
 type EditorMode = "detail" | "edit" | "create";
-type ViewMode = "library" | "board";
+type ViewMode = "library" | "board" | "manage";
 type AdoptionMode = "NEW_VERSION_ONLY" | "ALL_LINKED_JOBS" | "SELECTED_JOBS";
 
 const categories: BlockCategory[] = [
@@ -286,7 +294,7 @@ function BlockBodyPreview({
   );
 }
 
-export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps) {
+export function BlockLibrary({ blocks: initialBlocks, jobs, canManage = false }: BlockLibraryProps) {
   const [blocks, setBlocks] = useState(initialBlocks);
   const [view, setView] = useState<ViewMode>("library");
   const [query, setQuery] = useState("");
@@ -303,6 +311,11 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
   const [isSaving, setIsSaving] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+
+  // The old Block management address lands here as ?tab=manage.
+  useEffect(() => {
+    if (canManage && new URLSearchParams(window.location.search).get("tab") === "manage") setView("manage");
+  }, [canManage]);
 
   const filteredBlocks = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -677,7 +690,8 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
       <div className="mb-5 flex flex-wrap gap-2">
         {[
           { key: "library", label: "Block Library", icon: Blocks },
-          { key: "board", label: "Template Board", icon: LayoutGrid }
+          { key: "board", label: "Template Board", icon: LayoutGrid },
+          ...(canManage ? [{ key: "manage", label: "Manage", icon: Archive }] : [])
         ].map((item) => {
           const Icon = item.icon;
           const active = view === item.key;
@@ -721,7 +735,9 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
         </div>
       )}
 
-      {view === "board" ? (
+      {view === "manage" ? (
+        <BlockManagementWorkspace blocks={blocks} />
+      ) : view === "board" ? (
         <BlockTemplateBoard
           blocks={blocks}
           jobs={jobs}
@@ -848,12 +864,18 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     {mode === "create" ? "New reusable content block" : selectedBlock?.name}
                   </h2>
                   {mode !== "create" && selectedBlock ? (
-                    <Link
-                      href="/settings/content-blocks"
-                      className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400"
-                    >
-                      Used by {selectedBlock.usageCount ?? 0} jobs · manage ›
-                    </Link>
+                    canManage ? (
+                      // Same page now, so a tab switch rather than a link.
+                      <button
+                        type="button"
+                        onClick={() => setView("manage")}
+                        className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400"
+                      >
+                        Used by {selectedBlock.usageCount ?? 0} jobs · manage ›
+                      </button>
+                    ) : (
+                      <p className="mt-1 text-xs font-semibold text-brand-grey dark:text-slate-400">Used by {selectedBlock.usageCount ?? 0} jobs</p>
+                    )
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
