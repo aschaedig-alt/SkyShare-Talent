@@ -28,6 +28,7 @@ export const REPORTS: ReportEntry[] = [
   { id: "turnover", group: "People", title: "Turnover", question: "How many people leave in a year?", href: "/reports/people/turnover" },
   { id: "progression", group: "Pilots", title: "Fleet progression", question: "Are pilot seats filled, and how do pilots move up?", href: "/reports/pilots/progression" },
   { id: "quality", group: "Hiring", title: "Hire quality", question: "Are we hiring well?", href: "/reports/hiring/quality", hrOnly: true },
+  { id: "baseline", group: "Hiring", title: "Hire quality baseline", question: "Where did hire quality start, 2021 to 2025?", href: "/reports/hiring/baseline", hrOnly: true },
   { id: "check-ins", group: "Hiring", title: "Manager check-ins", question: "What do managers say about new hires?", href: "/reports/hiring/check-ins", hrOnly: true },
   { id: "offers", group: "Hiring", title: "Offers", question: "Do people accept our offers?", href: "/reports/hiring/offers", hrOnly: true },
   { id: "sources", group: "Hiring", title: "Where hires come from", question: "How did people find us?", href: "/reports/hiring/sources" },

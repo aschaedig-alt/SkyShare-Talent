@@ -1544,6 +1544,29 @@ uploads. On a phone the drawer menu opens and every item can be tapped.
 
 ---
 
+### 96. Nobody has frozen the Quality of Hire baseline yet, or printed it
+
+**Status:** OPEN
+**Added:** 2026-11-26
+
+Milestone 3 (Dec 3): Reports > Hiring > Hire quality baseline shows the Good Hire
+Criteria applied to 2021-2025 hires, counts only. It is live until an admin presses
+"Freeze the baseline"; then the numbers are kept as they stood and never move, and
+"Unfreeze" goes back to live numbers (the frozen copy is kept). Checked by the session:
+the page renders on the local site with the live figures, no names in it, on desktop,
+at 329px and in dark mode; an empty request to the freeze route is refused without
+writing. NOT checked: the freeze and unfreeze themselves (each writes the live
+database, so the session did not press them), and Export PDF's printed page.
+
+**How to check it:** once the open HR calls are made, open the page on the live site,
+press Freeze the baseline, confirm, then Export PDF.
+
+**What would count as a pass:** the note at the top says "Frozen on" with your name,
+the numbers match what showed before freezing, and the PDF fits the page without the
+side menu.
+
+---
+
 ## Closed
 
 ### 2. Private HR notes have never been loaded by a non-HR viewer
